@@ -17,6 +17,8 @@
 
 #include <cairo.h>
 
+#include <time.h>
+
 uint32_t *pixels;
 
 // config stuff
@@ -30,6 +32,9 @@ cairo_t *cr;
 void copy_buffer(const color_t* restrict src, const int module_position, const int module_width) {
 
     LOG_DEBUG("%08x\n", ((color_t*) src)[0]);
+
+    //struct timespec start, stop;
+    //clock_gettime(CLOCK_REALTIME, &start);
 
     // new surf
     cairo_surface_t *surf = cairo_image_surface_create_for_data((unsigned char*) src, CAIRO_FORMAT_ARGB32, module_width, height, module_width * 4);  
@@ -45,8 +50,38 @@ void copy_buffer(const color_t* restrict src, const int module_position, const i
 
     // kill surf
     cairo_surface_destroy(surf);
-}
 
+
+    /*
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < module_width; x++) {
+
+            color_t color = src[y * module_width + x]; 
+            color_t alpha = (color & 0xFF000000) >> 24;
+            
+            color_t red_mask = 0x00FF0000;
+            color_t blue_mask = 0x0000FF00;
+            color_t green_mask = 0x000000FF;
+
+                
+            pixels[y * width + x + module_position] = 
+                ((((background_color & red_mask) * (255 - alpha) + (color & red_mask) * (alpha)) / 255) & red_mask) | 
+                ((((background_color & blue_mask) * (255 - alpha) + (color & blue_mask) * (alpha)) / 255) & blue_mask) |
+                ((((background_color & green_mask) * (255 - alpha) + (color & green_mask) * (alpha))/ 255) & green_mask);
+
+        }
+    }*/
+
+    /*
+    clock_gettime(CLOCK_REALTIME, &stop);
+    
+    double accum = ( stop.tv_sec - start.tv_sec )
+             + (double)( stop.tv_nsec - start.tv_nsec )
+               / (double) 1000000000L;
+    printf( "%lf\n", accum );
+    */
+
+}
 
 void* thread_function(void* unused) {
     for (;;) {

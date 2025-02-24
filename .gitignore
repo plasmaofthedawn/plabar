@@ -3,3 +3,5 @@ build
 protocol
 compile_commands.json
 src/wayland
+config.ini
+plabar
