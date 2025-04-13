@@ -9,8 +9,8 @@
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
-#include "wayland/wlr-layer-shell.h"
-#include "wayland/xdg-shell-client-protocol.h"
+#include "wlr-layer-shell-unstable-v1.h"
+#include "xdg-shell.h"
 
 #include "config.h"
 
