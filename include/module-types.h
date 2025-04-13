@@ -14,7 +14,7 @@ typedef struct module_t {
 
 	// position and width of this module -- probably shouldn't be edited manually
 	int32_t position;
-	uint32_t width;
+	int32_t width;
 
 	// any extra data 
 	void* data;

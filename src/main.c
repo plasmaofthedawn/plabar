@@ -22,8 +22,8 @@
 uint32_t *pixels;
 
 // config stuff
-unsigned int width = 2256;
-unsigned int height = 200;
+int width = 2256;
+int height = 200;
 direction_t anchor_pos;
 color_t background_color = 0x00000000;
 
@@ -79,23 +79,15 @@ int print_entry(void* const context, struct hashmap_element_s* const e) {
 
 void parse_global_config(struct hashmap_s *global_map) {
     
-    char* element;
+    char* pos;
 
-    CONFIG_GET_OR_FAIL(global_map, "width", element, "global");
-    width = atoi(element);
+    CONFIG_GET_OR_FAIL(global_map, "width", width, "global");
+    CONFIG_GET_OR_FAIL(global_map, "height", height, "global");
+    CONFIG_GET_OR_FAIL(global_map, "position", pos, "global");
 
-    CONFIG_GET_OR_FAIL(global_map, "height", element, "global");
-    height = atoi(element);
-
-    if ((element = hashmap_get(global_map, "background_color", sizeof("background_color") - 1)) != NULL) {
-        background_color = get_color_from_value(element, "background_color", "global");
-        background_color &= 0x00FFFFFF; // clear alpha value
-    }
-
-    CONFIG_GET_OR_FAIL(global_map, "position", element, "global");
-    char* pos = get_string_from_value(element, "position", "global");
-
-
+    CONFIG_GET(global_map, "background_color", background_color, "global");
+    background_color &= 0x00FFFFFF; // clear alpha value
+    
     if (strcmp(pos, "top") == 0) {
         anchor_pos = DIRECTION_TOP;
     } else if (strcmp(pos, "bottom") == 0) {

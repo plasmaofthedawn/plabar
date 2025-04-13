@@ -7,18 +7,13 @@ void (*mark_dirty) (module_t*);
 
 void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config) {
 
-   char* elem;
-   CONFIG_GET_OR_FAIL(local_config, "width", elem, MODULE_NAME);
-   out->width = atoi(elem);
+   int height;
+   color_t color;
 
-   CONFIG_GET_OR_FAIL(local_config, "position", elem, MODULE_NAME);
-   out->position = atoi(elem);
-
-   CONFIG_GET_OR_FAIL(local_config, "color", elem, MODULE_NAME);
-   color_t color = get_color_from_value(elem, "color", MODULE_NAME);
-
-   CONFIG_GET_OR_FAIL(global_config, "height", elem, "global");
-   int height = atoi(elem);
+   CONFIG_GET_OR_FAIL(local_config, "width", out->width, MODULE_NAME);
+   CONFIG_GET_OR_FAIL(local_config, "position", out->position, MODULE_NAME);
+   CONFIG_GET_OR_FAIL(local_config, "color", color, MODULE_NAME);
+   CONFIG_GET_OR_FAIL(global_config, "height", height, "global");
    
    out->buffer = malloc(sizeof(color_t) * height * out->width);
    
@@ -27,6 +22,4 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
    }
 
    mark_dirty(out);
-
-   //pthread_mutex_unlock(&out->buffer_mutex);
 }

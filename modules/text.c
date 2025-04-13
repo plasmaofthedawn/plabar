@@ -11,30 +11,17 @@ void (*mark_dirty) (module_t*);
 char* MODULE_NAME = "text";
 
 void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config) {
-
-   // note that cairo's text api is a "toy" api and "not for serious projects".
-   // todo: pangocairo
    
-   char* elem;
-   CONFIG_GET_OR_FAIL(local_config, "position", elem, "text");
-   out->position = atoi(elem);
+   color_t color;
+   char *text, *font_face;
+   int width = -1, height;
 
-   CONFIG_GET_OR_FAIL(local_config, "color", elem, "text")
-   color_t color = get_color_from_value(elem, "color", "text");
-
-   char* text;
+   CONFIG_GET_OR_FAIL(local_config, "position", out->position, "text");
+   CONFIG_GET_OR_FAIL(local_config, "color", color, "text");
    CONFIG_GET_OR_FAIL(local_config, "text", text, "text");
-   text = get_string_from_value(text, "text", "text");
-   
-
-   // prefer local config, fallback to global config
-   char* font_face;
    CONFIG_GET_FALLBACK_OR_FAIL(local_config, global_config, "font-face", font_face, "text");
-   font_face = get_string_from_value(font_face, "font-face", "text");
-
-   CONFIG_GET_OR_FAIL(global_config, "height", elem, "global");
-   int height = atoi(elem);
-
+   CONFIG_GET(local_config, "width", height, "global");
+   CONFIG_GET_OR_FAIL(global_config, "height", height, "global");
 
    int text_width, text_height;
 
@@ -57,8 +44,8 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
    }
 
    // use it to set width if needed
-   if ((elem = hashmap_get(local_config, "width", 5))) {
-      out->width = atoi(elem);      
+   if (width >= 0) {
+      out->width = width;      
    } else {
       out->width = text_width;
    }

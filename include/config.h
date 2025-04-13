@@ -28,25 +28,11 @@ int count_modules();
   LOG_ERROR(FORMAT __VA_OPT__(,) __VA_ARGS__); \
   exit(1) \
 
-
-
-#define CONFIG_GET_OR_FAIL(map, key, elem, module_name) \
-  if ((elem = hashmap_get(map, key, sizeof(key) - 1)) == NULL) { PARSE_FAIL("module %s requires key %s which is missing\n", module_name, key); }
-
-#define CONFIG_GET_FALLBACK_OR_FAIL(map, fallback_map, key, elem, module_name) \
-  if ((elem = hashmap_get(map, key, sizeof(key) - 1)) == NULL) { \
-    if ((elem = hashmap_get(fallback_map, key, sizeof(key) - 1)) == NULL) { \
-      PARSE_FAIL("module %s requires key %s in local or global config which is missing", module_name, key); \
-    } \
-  }
-
-
-__attribute__((weak)) color_t get_color_from_value(const char* value, const char* key, const char* module) {
+static inline color_t config_parse_color(const char* value, const char* key, const char* module) {
 
    if (value[0] != '#') {
       PARSE_FAIL("in module %s, key %s = %s is not a valid color\n", module, key, value);
    }  
-
 
    errno = 0;
    color_t ret = strtol(&value[1], NULL, 16);
@@ -55,18 +41,17 @@ __attribute__((weak)) color_t get_color_from_value(const char* value, const char
       PARSE_FAIL("in module %s, key %s = %s is not a valid color\n", module, key, value);
    }
 
-   // make fully opaque
+   // make fully opaque if short
    if (strlen(value) <= 7) {
       ret |= 0xFF000000;
    }
 
+   LOG_DEBUG("parsed color #%x\n", ret);
+
    return ret;
-
-
 }
 
-
-__attribute__((weak)) char* get_string_from_value(char* value, const char* key, const char* module) {
+static inline char* config_parse_string(char* value, const char* key, const char* module) {
    int i, j;
 
 
@@ -84,7 +69,53 @@ __attribute__((weak)) char* get_string_from_value(char* value, const char* key, 
 
    value[j] = 0;
    return &value[i + 1];
-
 }
+
+static inline int config_parse_int(char* value, const char* key, const char* module) {
+
+   errno = 0;
+   int ret = strtol(value, NULL, 10);
+
+   if (errno) {
+      PARSE_FAIL("in module %s, key %s = %s is not a valid number\n", module, key, value);
+   }
+
+   return ret;
+}
+
+
+#define CONFIG_PARSE(destination, value, key, module) \
+   destination = _Generic((destination), \
+                          color_t: config_parse_color, \
+                          int: config_parse_int, \
+                          char*: config_parse_string \
+                 )(value, key, module);
+
+#define CONFIG_GET(map, key, destination, module) \
+   do { \
+      char *_temp; \
+      _temp = hashmap_get(map, key, sizeof(key) - 1); \
+      if (_temp) { CONFIG_PARSE(destination, _temp, key, module); } \
+   } while (0)
+
+#define CONFIG_GET_OR_FAIL(map, key, destination, module) \
+   do { \
+      char *_temp; \
+      _temp = hashmap_get(map, key, sizeof(key) - 1); \
+      if (_temp) { CONFIG_PARSE(destination, _temp, key, module); } \
+      else { PARSE_FAIL("module %s requires key %s which is missing\n", module, key); } \
+   } while (0)
+
+#define CONFIG_GET_FALLBACK_OR_FAIL(map, fallback_map, key, destination, module) \
+   do { \
+      char *_temp; \
+      _temp = hashmap_get(map, key, sizeof(key) - 1); \
+      if (_temp) { CONFIG_PARSE(destination, _temp, key, module); } \
+      else { \
+         _temp = hashmap_get(fallback_map, key, sizeof(key)-1); \
+         if (_temp) { CONFIG_PARSE(destination, _temp, key, module); }\
+         else { PARSE_FAIL("module %s requires key %s in local or global config which is missing", module, key); } \
+      } \
+   } while (0)
 
 #endif  

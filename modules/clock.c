@@ -1,3 +1,4 @@
+#include "cairo.h"
 #include "module-types.h"
 #include "config.h"
 
@@ -50,9 +51,10 @@ void* thread_function(void* param) {
       // get current time
       strftime(data->buffer, 100, data->format, &current_time);
 
+      LOG_ERROR("%s\n", data->buffer);
+
       // set text
       pango_layout_set_text(data->layout, data->buffer, -1);
-      
       
       // draw
       pango_layout_get_pixel_size(data->layout, &text_width, &text_height);
@@ -78,29 +80,22 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
    module_clock_data *data = out->data;
 
    // load stuff
-   char* elem;
-   CONFIG_GET_OR_FAIL(local_config, "position", elem, "clock");
-   out->position = atoi(elem);
+   
+   char *t, *font_face;
+   int width = -1;
 
-   // color of the text
-   CONFIG_GET_OR_FAIL(local_config, "color", elem, "clock")
-   data->color = get_color_from_value(elem, "color", "clock");
+   CONFIG_GET_OR_FAIL(local_config, "position", out->position, "clock");
+   CONFIG_GET_OR_FAIL(local_config, "color", data->color, "clock");
+   CONFIG_GET(local_config, "width", width, "clock");
 
-   char* format;
-   CONFIG_GET_OR_FAIL(local_config, "format", format, "clock");
-   format = get_string_from_value(format, "format", "clock");
-   strcpy(data->format, format);
-
-   // prefer local config, fallback to global config
-   char* font_face;
+   CONFIG_GET_OR_FAIL(global_config, "height", data->height, "global");
+   
+   // strings
+   CONFIG_GET_OR_FAIL(local_config, "format", t, "clock");
+   strcpy(data->format, t);
    CONFIG_GET_FALLBACK_OR_FAIL(local_config, global_config, "font-face", font_face, "clock");
-   font_face = get_string_from_value(font_face, "font-face", "clock");
-
-   CONFIG_GET_OR_FAIL(global_config, "height", elem, "global");
-   data->height = atoi(elem);
 
    /// find text extents 
-
    strftime(data->buffer, 100, data->format, &base_time);
    LOG_DEBUG("%s, %s\n", data->buffer, data->format);
    int text_width, text_height;
@@ -117,26 +112,20 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
 
    cairo_destroy(cr);
 
-   // idfk dude
-   text_width += 5;
-
-
    if (text_height > data->height) {
       LOG_WARN("Text height (%d) is greater than bar height (%d), text may be clipped\n", text_height, data->height);
    }
-
-   if ((elem = hashmap_get(local_config, "width", 5))) {
-      out->width = atoi(elem);  
+   
+   if (width >= 0) {
+      out->width = width;  
    } else {
       out->width = text_width;
    }
 
-   LOG_DEBUG("text size %dx%d\n", text_width, text_height);  
-
    out->buffer = calloc(out->width * data->height * sizeof(color_t), 1);
-
    
    // create new buffer
+   printf("%dx%d\n", out->width, data->height);
    data->surface = cairo_image_surface_create_for_data((unsigned char*) out->buffer, CAIRO_FORMAT_ARGB32, out->width, data->height, sizeof(color_t) * out->width);
    data->cr = cairo_create(data->surface);
   
