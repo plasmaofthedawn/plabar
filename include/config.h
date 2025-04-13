@@ -2,7 +2,10 @@
 #define INCLUDE_PLABAR_CONFIGH
 
 
+#include <errno.h>
 #include <stdint.h>
+#include <ctype.h>
+
 #define DIRECTION_TOP 0
 #define DIRECTION_RIGHT 1
 #define DIRECTION_LEFT 2
@@ -37,7 +40,51 @@ int count_modules();
     } \
   }
 
-color_t get_color_from_value(char* value, char* key, char* module);
-char* get_string_from_value(char* value, char* key, char* module);
+
+__attribute__((weak)) color_t get_color_from_value(const char* value, const char* key, const char* module) {
+
+   if (value[0] != '#') {
+      PARSE_FAIL("in module %s, key %s = %s is not a valid color\n", module, key, value);
+   }  
+
+
+   errno = 0;
+   color_t ret = strtol(&value[1], NULL, 16);
+
+   if (errno) {
+      PARSE_FAIL("in module %s, key %s = %s is not a valid color\n", module, key, value);
+   }
+
+   // make fully opaque
+   if (strlen(value) <= 7) {
+      ret |= 0xFF000000;
+   }
+
+   return ret;
+
+
+}
+
+
+__attribute__((weak)) char* get_string_from_value(char* value, const char* key, const char* module) {
+   int i, j;
+
+
+   for (i = 0; value[i] != '"'; i++) {
+      if (!isspace(value[i])) {
+         PARSE_FAIL("in module %s, key %s = %s is not a valid string \n", module, key, value);
+      }
+   }
+
+   for (j = i + 1; value[j] != '"'; j++) {
+      if (value[j] == 0) {
+         PARSE_FAIL("in module %s, key %s = %s does not have a closing \"\n", module, key, value);
+      }
+   }
+
+   value[j] = 0;
+   return &value[i + 1];
+
+}
 
 #endif  

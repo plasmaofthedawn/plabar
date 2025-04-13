@@ -6,7 +6,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #define CONFIG_LINE_EMPTY 0
 #define CONFIG_LINE_HEADER 1
@@ -244,52 +243,3 @@ int parse_module_config(char** module_name, struct hashmap_s* map) {
 
 }
 
-
-// ################### number/string parsing helpers
-
-
-color_t get_color_from_value(char* value, char* key, char* module) {
-
-   if (value[0] != '#') {
-      PARSE_FAIL("in module %s, key %s = %s is not a valid color\n", module, key, value);
-   }  
-
-
-   errno = 0;
-   color_t ret = strtol(&value[1], NULL, 16);
-
-   if (errno) {
-      PARSE_FAIL("in module %s, key %s = %s is not a valid color\n", module, key, value);
-   }
-
-   // make fully opaque
-   if (strlen(value) <= 7) {
-      ret |= 0xFF000000;
-   }
-
-   return ret;
-
-
-}
-
-
-char* get_string_from_value(char* value, char* key, char* module) {
-   int i, j;
-
-
-   for (i = 0; value[i] != '"'; i++) {
-      if (!isspace(value[i])) {
-         PARSE_FAIL("in module %s, key %s = %s is not a valid string \n", module, key, value);
-      }
-   }
-
-   for (j = i + 1; value[j] != '"'; j++) {
-      if (value[j] == 0) {
-         PARSE_FAIL("in module %s, key %s = %s does not have a closing \"\n", module, key, value);
-      }
-   }
-
-   value[j] = 0;
-   return &value[i + 1];
-
-}

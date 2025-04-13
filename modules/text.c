@@ -1,12 +1,16 @@
-#include "../module.h"
-#include "../config.h"
+#include "module-types.h"
+#include "config.h"
 #include "cairo.h"
 
 #include <pango/pangocairo.h>
 
 #include <stdio.h>
 
-void module_text_init(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config) {
+void (*mark_dirty) (module_t*);
+
+char* MODULE_NAME = "text";
+
+void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config) {
 
    // note that cairo's text api is a "toy" api and "not for serious projects".
    // todo: pangocairo

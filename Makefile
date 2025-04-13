@@ -1,72 +1,65 @@
-CC=gcc
-CFLAGS=-Wall -g -D DEBUG_DEBUG 
-LIBS=`pkg-config --cflags --libs pangocairo wayland-client`
+dir_guard=@mkdir -p $(@D)
 
+# directories
+BUILD_DIR=build
+SOURCE_DIR=src
+MODULE_DIR=modules
+INCLUDE_DIR=include
+PROTOCOL_DIR=protocol
+
+# C
+CC=gcc
+CFLAGS=-Wall -g -D DEBUG_DEBUG -I$(INCLUDE_DIR)
+MODULEFLAGS=-fPIC
+LIBS=-ldl `pkg-config --cflags --libs pangocairo wayland-client`
+
+# program name
 PROGRAM=plabar
 
-OBJECTS=main.o window.o config.o module.o
-WAYLAND_OBJECTS=xdg-shell-protocol.o wlr-layer-shell.o 
-MODULES=block.o
+# compilables
+OBJECTS=main.o window.o config.o module.o xdg-shell.o wlr-layer-shell-unstable-v1.o
+MODULES=block.pbm text.pbm
 
-BUILDDIR=build
-SOURCEDIR=src
-WAYLANDDIR=wayland
-MODULEDIR=modules
+# wayland
+PROTOCOLS=wlr-layer-shell-unstable-v1.xml xdg-shell.xml
+WAYLAND_PROTOCOLS=$(addprefix $(PROTOCOL_DIR)/, $(PROTOCOLS))
+WAYLAND_HEADERS=$(addprefix $(INCLUDE_DIR)/, $(PROTOCOLS:.xml=.h))
+WAYLAND_SOURCE=$(addprefix $(BUILD_DIR)/, $(PROTOCOLS:.xml=.c))
 
-#BUILDLIST = $(addprefix $(PROTOCOLDIR)/, $(PROTOCOLS))
-BUILDLIST = $(addprefix $(BUILDDIR)/, $(OBJECTS))
-BUILDLIST += $(addprefix $(BUILDDIR)/, $(addprefix $(WAYLANDDIR)/, $(WAYLAND_OBJECTS)))
-#BUILDLIST += $(addprefix $(BUILDDIR)/, $(addprefix $(MODULEDIR)/, $(MODULES)))
+all: modules program
 
-WAYLAND_STUFF=src/wayland/wlr-layer-shell.h src/wayland/wlr-layer-shell.c src/wayland/xdg-shell-client-protocol.h src/wayland/xdg-shell-protocol.c 
+$(PROTOCOL_DIR)/wlr-layer-shell-unstable-v1.xml:
+	$(dir_guard)
+	curl -j -o $@ 'https://gitlab.freedesktop.org/wlroots/wlr-protocols/-/raw/master/unstable/wlr-layer-shell-unstable-v1.xml?inline=false'
 
-all: compile run
+$(PROTOCOL_DIR)/xdg-shell.xml:
+	$(dir_guard)
+	cp /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml $@
 
-$(BUILD_DIR)/.:
-	mkdir -p $@
+$(WAYLAND_HEADERS): $(WAYLAND_PROTOCOLS)
+	$(dir_guard)
+	wayland-scanner client-header $(PROTOCOL_DIR)/$(basename $(notdir $@)).xml $@
 
-$(BUILD_DIR)%/.:
-	mkdir -p $@
+$(WAYLAND_SOURCE): $(WAYLAND_PROTOCOLS) $(WAYLAND_HEADERS)
+	$(dir_guard)
+	wayland-scanner private-code $(PROTOCOL_DIR)/$(basename $(notdir $@)).xml $@
 
-protocol/.:
-	mkdir -p $@
-
-src/wayland/.:
-	mkdir -p $@
-
-.SECONDEXPANSION:
-
-protocol/wlr-layer-shell-unstable-v1.xml: protocol/.
-	curl -j -o $@ 'https://raw.githubusercontent.com/swaywm/wlr-protocols/refs/heads/master/unstable/wlr-layer-shell-unstable-v1.xml'
-
-protocol/xdg-shell.xml: protocol/.
-	cp /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml protocol/xdg-shell.xml
-
-src/wayland/wlr-layer-shell.h: protocol/wlr-layer-shell-unstable-v1.xml | $$(@D)/.
-	wayland-scanner client-header protocol/wlr-layer-shell-unstable-v1.xml src/wayland/wlr-layer-shell.h
-
-src/wayland/wlr-layer-shell.c: protocol/wlr-layer-shell-unstable-v1.xml | $$(@D)/.
-	wayland-scanner private-code protocol/wlr-layer-shell-unstable-v1.xml src/wayland/wlr-layer-shell.c
-
-src/wayland/xdg-shell-client-protocol.h: protocol/xdg-shell.xml | $$(@D)/.
-	wayland-scanner client-header protocol/xdg-shell.xml src/wayland/xdg-shell-client-protocol.h
-
-src/wayland/xdg-shell-protocol.c: protocol/xdg-shell.xml | $$(@D)/.
-	wayland-scanner private-code protocol/xdg-shell.xml src/wayland/xdg-shell-protocol.c
-
-$(BUILDDIR)/module.o: $(SOURCEDIR)/module.c $(SOURCEDIR)/modules/* | $$(@D)/.
-	$(CC) $(CFLAGS) $(LIBS) -c -o $@ $(SOURCEDIR)/module.c
-
-$(BUILDDIR)/%.o: $(SOURCEDIR)/%.c | $$(@D)/.
+$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c
+	$(dir_guard)
 	$(CC) $(CFLAGS) $(LIBS) -c -o $@ $^
 
-$(PROGRAM): $(BUILDLIST) $(WAYLANDBUILDLIST) | $$(@D)/.
-	$(CC) $(CFLAGS) $(BUILDLIST) $(LIBS) -o $(PROGRAM)
+$(BUILD_DIR)/%.pbm: $(MODULE_DIR)/%.c 
+	$(dir_guard)
+	$(CC) $(CFLAGS) $(MODULEFLAGS) $(LIBS) $^ -c -o $(basename $@).o
+	$(CC) -shared -o $@ $(basename $@).o
 
-compile: $(WAYLAND_STUFF) $(PROGRAM) 
+$(PROGRAM): $(addprefix $(BUILD_DIR)/, $(OBJECTS))
+	$(dir_guard)
+	$(CC) $(CFLAGS) $(addprefix $(BUILD_DIR)/, $(OBJECTS)) $(LIBS) -o $(PROGRAM)
 
-run: $(PROGRAM)
-	./plabar
+modules: $(addprefix $(BUILD_DIR)/, $(MODULES))
+
+program: $(WAYLAND_SOURCE) $(PROGRAM)
 
 clean:
-	rm -r $(PROGRAM) $(BUILDDIR) protocol src/wayland
+	rm -rf $(WAYLAND_HEADERS) $(WAYLAND_SOURCE) $(PROTOCOL_DIR) $(BUILD_DIR)

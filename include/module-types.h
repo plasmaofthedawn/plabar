@@ -1,11 +1,8 @@
-#ifndef INCLUDE_PLABAR_MODULEH
-#define INCLUDE_PLABAR_MODULEH
-
-
-#include "config.h"
 #include "hashmap.h"
+#include "config.h"
 
 #include <pthread.h>
+#include <stdint.h>
 
 typedef struct module_t {
 
@@ -31,12 +28,3 @@ typedef struct module_type_t {
 	void (*create_module)(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config);
 
 } module_type_t;
-
-
-void init_plabar_modules(int n_modules);
-void create_module_from_name(char* name, struct hashmap_s* global_config, struct hashmap_s* local_config);
-
-void mark_dirty(module_t* self);
-module_t* get_next_dirty_module();
-
-#endif  // INCLUDE_PLABAR_MODULEH
