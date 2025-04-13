@@ -18,7 +18,7 @@ PROGRAM=plabar
 
 # compilables
 OBJECTS=main.o window.o config.o module.o xdg-shell.o wlr-layer-shell-unstable-v1.o
-MODULES=block.pbm text.pbm
+MODULES=block.pbm text.pbm clock.pbm
 
 # wayland
 PROTOCOLS=wlr-layer-shell-unstable-v1.xml xdg-shell.xml
