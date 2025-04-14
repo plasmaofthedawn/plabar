@@ -30,11 +30,9 @@ pthread_cond_t module_dirty_condition;
 pthread_mutex_t module_dirty_cond_mutex;
 
 // protected by the module_dirty_cond_mutex above
-// (circular) array of modules that need to be updated
-// TODO: make this a stack or smth
+// stack of modules that need to be updated
 module_t** dirty_modules;
-int dirty_modules_start = 0;
-int dirty_modules_end = 0;
+int dirty_modules_count = 0;
 
 
 #define GET_DLSYM_OR_ERROR(storage, filename, handle, location) \
@@ -151,11 +149,10 @@ void mark_dirty(module_t* self) {
    
    pthread_mutex_lock(&module_dirty_cond_mutex);
 
-   // add this module to the end of the list
-   dirty_modules[dirty_modules_end] = self;
-
-   dirty_modules_end += 1;
-   dirty_modules_end %= num_modules + 1;
+   // add this module to the end of the stack 
+   
+   dirty_modules_count += 1;
+   dirty_modules[dirty_modules_count] = self;
 
    pthread_cond_signal(&module_dirty_condition);
    pthread_mutex_unlock(&module_dirty_cond_mutex);
@@ -168,16 +165,14 @@ module_t* get_next_dirty_module() {
 
    pthread_mutex_lock(&module_dirty_cond_mutex);
 
-   LOG_DEBUG("%d, %d\n", dirty_modules_start, dirty_modules_end);
+   LOG_DEBUG("currently %d dirty modules waiting\n", dirty_modules_count);
 
-   while (dirty_modules_end == dirty_modules_start) {
+   while (dirty_modules_count == 0) {
       pthread_cond_wait(&module_dirty_condition, &module_dirty_cond_mutex);
    }
 
-   module_t* ret = dirty_modules[dirty_modules_start];
-
-   dirty_modules_start += 1;
-   dirty_modules_start %= num_modules + 1;
+   module_t* ret = dirty_modules[dirty_modules_count];
+   dirty_modules_count--;
 
    pthread_mutex_unlock(&module_dirty_cond_mutex);
    

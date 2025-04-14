@@ -28,7 +28,7 @@ cairo_t *cr;
 
 void copy_buffer(const color_t* restrict src, const int module_position, const int module_width) {
 
-    LOG_DEBUG("%08x\n", ((color_t*) src)[0]);
+    //LOG_DEBUG("%08x\n", ((color_t*) src)[0]);
     LOG_DEBUG("drawing module width %d position %d\n", module_width, module_position);
 
     //struct timespec start, stop;
