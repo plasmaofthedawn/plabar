@@ -7,17 +7,14 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <limits.h>
+#include <cairo.h>
+#include <time.h>
 
 #include "hashmap.h"
 #include "window.h"
 #include "config.h"
 #include "module.h"
-
 #include "log.h"
-
-#include <cairo.h>
-
-#include <time.h>
 
 uint32_t *pixels;
 
@@ -25,13 +22,14 @@ uint32_t *pixels;
 int width = 2256;
 int height = 200;
 direction_t anchor_pos;
-color_t background_color = 0x00000000;
+color_t background_color = 0xFF000000;
 
 cairo_t *cr;
 
 void copy_buffer(const color_t* restrict src, const int module_position, const int module_width) {
 
     LOG_DEBUG("%08x\n", ((color_t*) src)[0]);
+    LOG_DEBUG("drawing module width %d position %d\n", module_width, module_position);
 
     //struct timespec start, stop;
     //clock_gettime(CLOCK_REALTIME, &start);
@@ -40,12 +38,15 @@ void copy_buffer(const color_t* restrict src, const int module_position, const i
     cairo_surface_t *surf = cairo_image_surface_create_for_data((unsigned char*) src, CAIRO_FORMAT_ARGB32, module_width, height, module_width * 4);  
 
     // fill background
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_rectangle(cr, module_position, 0, module_position + module_width, height);
+    cairo_set_source_rgba(cr, ((background_color & 0x00FF0000) >> 16) / 255.0, ((background_color & 0x000000FF00) >> 8) / 255.0, ((background_color & 0x000000FF)) / 255.0, ((background_color & 0xFF000000) >> 24) / 255.0); 
+
+    cairo_rectangle(cr, module_position, 0, module_width, height);
     cairo_fill(cr);
 
     // fill buffer
     cairo_set_source_surface(cr, surf, module_position, 0);
+    //cairo_rectangle(cr, 0, 0, module_width, height);
+    //cairo_rectangle(cr, module_position, 0, module_position + module_width, height);
     cairo_paint(cr);
 
     // kill surf
@@ -86,7 +87,7 @@ void parse_global_config(struct hashmap_s *global_map) {
     CONFIG_GET_OR_FAIL(global_map, "position", pos, "global");
 
     CONFIG_GET(global_map, "background_color", background_color, "global");
-    background_color &= 0x00FFFFFF; // clear alpha value
+    background_color &= 0xFFFFFFFF; // clear alpha value
     
     if (strcmp(pos, "top") == 0) {
         anchor_pos = DIRECTION_TOP;
