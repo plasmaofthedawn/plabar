@@ -3,8 +3,6 @@
 
 const char* MODULE_NAME = "block";
 
-void (*mark_dirty) (module_t*);
-
 void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config) {
 
    int height;
@@ -21,5 +19,5 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
       out->buffer[i] = color;
    }
 
-   mark_dirty(out);
+   out->mark_dirty(out);
 }

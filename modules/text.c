@@ -6,8 +6,6 @@
 
 #include <stdio.h>
 
-void (*mark_dirty) (module_t*);
-
 char* MODULE_NAME = "text";
 
 void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_s *local_config) {
@@ -84,6 +82,6 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
    g_object_unref(layout);
    cairo_surface_destroy(surface);
    
-   mark_dirty(out);
+   out->mark_dirty(out);
 
 }

@@ -26,27 +26,21 @@ color_t background_color = 0xFF000000;
 
 cairo_t *cr;
 
+// graphics #################
+
 void copy_buffer(const color_t* restrict src, const int module_position, const int module_width) {
 
-    //LOG_DEBUG("%08x\n", ((color_t*) src)[0]);
     LOG_DEBUG("drawing module width %d position %d\n", module_width, module_position);
-
-    //struct timespec start, stop;
-    //clock_gettime(CLOCK_REALTIME, &start);
-
     // new surf
     cairo_surface_t *surf = cairo_image_surface_create_for_data((unsigned char*) src, CAIRO_FORMAT_ARGB32, module_width, height, module_width * 4);  
 
     // fill background
-    cairo_set_source_rgba(cr, ((background_color & 0x00FF0000) >> 16) / 255.0, ((background_color & 0x000000FF00) >> 8) / 255.0, ((background_color & 0x000000FF)) / 255.0, ((background_color & 0xFF000000) >> 24) / 255.0); 
-
+    cairo_set_source_rgba(cr, ((background_color & 0x00FF0000) >> 16) / 255.0, ((background_color & 0x000000FF00) >> 8) / 255.0, ((background_color & 0x000000FF)) / 255.0, ((background_color & 0xFF000000) >> 24) / 255.0);
     cairo_rectangle(cr, module_position, 0, module_width, height);
     cairo_fill(cr);
 
     // fill buffer
     cairo_set_source_surface(cr, surf, module_position, 0);
-    //cairo_rectangle(cr, 0, 0, module_width, height);
-    //cairo_rectangle(cr, module_position, 0, module_position + module_width, height);
     cairo_paint(cr);
 
     // kill surf
@@ -67,16 +61,21 @@ void* thread_function(void* unused) {
         // idk yet
         update_window(0, 0, INT_MAX, INT_MAX);
 
-        //sleep(1);
-
     }
 }
+
+// input handling
+
+
+
+
+
+//////// stuff
 
 int print_entry(void* const context, struct hashmap_element_s* const e) {
     LOG_DEBUG("  %s (%d): %s\n", (char *) e->key, e->key_len, (char *) e->data);
     return 0;
 }
-
 
 void parse_global_config(struct hashmap_s *global_map) {
     
@@ -96,8 +95,6 @@ void parse_global_config(struct hashmap_s *global_map) {
     } else {
         PARSE_FAIL("unsupported position %s in module %s, only directions top and bottom are supported)", pos, "global"); 
     }
-    
-
 }
 
 int main() {

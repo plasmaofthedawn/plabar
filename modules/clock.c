@@ -9,7 +9,6 @@
 const struct timespec sleep_time = {.tv_sec = 0, .tv_nsec = 500000000};
 
 const char* MODULE_NAME = "clock";
-void (*mark_dirty) (module_t*);
 
 typedef struct module_clock_data {
    // for strftime
@@ -50,9 +49,6 @@ void* thread_function(void* param) {
 
       // get current time
       strftime(data->buffer, 100, data->format, &current_time);
-
-      LOG_ERROR("%s\n", data->buffer);
-
       // set text
       pango_layout_set_text(data->layout, data->buffer, -1);
       
@@ -60,7 +56,7 @@ void* thread_function(void* param) {
       pango_layout_get_pixel_size(data->layout, &text_width, &text_height);
       cairo_move_to(data->cr, (self->width - text_width)/2, (data->height - text_height) / 2);
       pango_cairo_show_layout(data->cr, data->layout);   
-      mark_dirty(self);
+      self->mark_dirty(self);
 
       nanosleep(&sleep_time, NULL);
 

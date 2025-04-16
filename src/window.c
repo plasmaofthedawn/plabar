@@ -9,27 +9,71 @@
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
+#include <wayland-util.h>
 #include "wlr-layer-shell-unstable-v1.h"
 #include "xdg-shell.h"
 
 #include "config.h"
+#include "module.h"
 
-// base display
+// wayland stuff
 struct wl_display *display;
-
 struct wl_shm *shm;
 struct wl_compositor *compositor;
 struct wl_shm_pool *pool;
 
-//struct xdg_wm_base *xdg_wm_base = NULL;
-struct zwlr_layer_shell_v1 *zwlr_layer_shell;
+// for input
+struct wl_seat *seat;
+struct wl_pointer *pointer;
 
+// for drawing
+struct zwlr_layer_shell_v1 *zwlr_layer_shell;
 struct wl_surface *surface;
 struct wl_buffer *buffer;
 
 int configured;
 
 uint32_t* pixel_buffer;
+
+static void wl_callback_unused() {
+    // do nothing
+}
+
+// ############## Input Junk
+
+static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
+    handle_pointer_enter(wl_fixed_to_int(surface_x), wl_fixed_to_int(surface_y));
+}
+
+static void wl_pointer_leave(void* data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface) {
+    handle_pointer_leave();
+}
+
+static void wl_pointer_motion(void* data, struct wl_pointer *wl_pointer, uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y){ 
+    handle_pointer_motion(wl_fixed_to_int(surface_x), wl_fixed_to_int(surface_y));
+   }
+
+static void wl_pointer_button(void* data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
+    handle_pointer_button(button, state);
+}
+
+static void wl_pointer_axis(void* data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value) {
+    handle_pointer_axis(axis, wl_fixed_to_int(value));
+}
+
+static struct wl_pointer_listener pointer_listener = {
+    .enter = wl_pointer_enter,
+    .leave = wl_pointer_leave,
+    .motion = wl_pointer_motion,
+    .button = wl_pointer_button,
+    .axis = wl_pointer_axis,
+    .frame = wl_callback_unused,
+    .axis_source = wl_callback_unused,
+    .axis_stop = wl_callback_unused,
+    .axis_discrete = wl_callback_unused,
+    .axis_value120 = wl_callback_unused,
+    .axis_relative_direction = wl_callback_unused,
+};
 
 /// ############# Wayland junk
 
@@ -59,6 +103,31 @@ struct zwlr_layer_surface_v1_listener zwlr_listener = {
     .closed = handle_close,
 };
 
+static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities) {
+
+    int have_pointer = capabilities & WL_SEAT_CAPABILITY_POINTER;
+
+    LOG_DEBUG("have_pointer %d, pointer %p", have_pointer, pointer);
+
+    if (have_pointer && pointer == NULL) {
+	// set pointer if we don't have one already
+	pointer = wl_seat_get_pointer(seat);
+	wl_pointer_add_listener(pointer, &pointer_listener, NULL);
+    } else if (!have_pointer && pointer) {
+	// remove pointer if one doesn't exist
+	wl_pointer_release(pointer);
+	pointer = NULL;
+    }
+}
+
+static void wl_seat_name(void *data, struct wl_seat *wl_seat, const char *name) {
+       LOG_DEBUG("wayland seat name: %s\n", name);
+}
+
+static const struct wl_seat_listener wl_seat_listener = {
+       .capabilities = wl_seat_capabilities,
+       .name = wl_seat_name,
+};
 // registry creates interfaces
 void registry_handle_global(void *data, struct wl_registry *registry, uint32_t name, const char* interface, uint32_t version) {
 
@@ -68,6 +137,9 @@ void registry_handle_global(void *data, struct wl_registry *registry, uint32_t n
         shm = wl_registry_bind(registry, name, &wl_shm_interface, version);
     } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 	zwlr_layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, version);
+    } else if (strcmp(interface, wl_seat_interface.name) == 0){
+	seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
+	wl_seat_add_listener(seat, &wl_seat_listener, NULL);
     }
 
     //printf("interface %s: version %d name %d\n", interface, version, name);

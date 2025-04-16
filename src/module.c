@@ -98,7 +98,6 @@ int init_plabar_modules(const char* module_dir, int n_modules) {
    
 
    const char** name;
-   void (**md)(module_t*);
 
    while ((dir_entry = readdir(module_directory))) {
       if (is_valid_module_name(dir_entry)){
@@ -118,10 +117,6 @@ int init_plabar_modules(const char* module_dir, int n_modules) {
          // load functions within
          GET_DLSYM_OR_ERROR(module_types[i].create_module, filename, handle, "module_init"); 
 
-         // export functions
-         GET_DLSYM_OR_ERROR(md, filename, handle, "mark_dirty"); 
-         *md = &mark_dirty;
-         
          LOG_INFO("found module %s in %s\n", *name, filename);
          // put it into the hashmap
          hashmap_put(&name_to_module, *name, strlen(*name), &module_types[i]);
@@ -131,7 +126,8 @@ int init_plabar_modules(const char* module_dir, int n_modules) {
 
    closedir(module_directory);
 
-   plabar_modules = malloc(sizeof(module_t) * n_modules);
+   // calloc to zero
+   plabar_modules = calloc(sizeof(module_t) * n_modules, 1);
    // +1 to allow for emptiness checking even when there's only one module
    dirty_modules = malloc(sizeof(module_t*) * n_modules + 1);
    num_modules = n_modules;
@@ -195,6 +191,7 @@ void create_module_from_name(char* name, struct hashmap_s* global_config, struct
 
       // basic setup
       pthread_mutex_init(&new_module->buffer_mutex, NULL); 
+      new_module->mark_dirty = mark_dirty;
 
       m_type->create_module(new_module, global_config, local_config);
 
@@ -202,6 +199,74 @@ void create_module_from_name(char* name, struct hashmap_s* global_config, struct
       LOG_ERROR("unknown module %s\n", name);
       exit(1);
    }
+}
+
+/// INPUT STUFF
+
+int current_cursor_module = -1;
+
+static inline int in_module(int x, module_t* module) {
+   return module->position <= x && x <= module->position + module->width;
+}
+
+#define run_if_not_null(x, ...) \
+   if (x) { x(__VA_ARGS__); }
+
+void handle_pointer_enter(int x, int y) {
+   
+   for (int i = 0; i < num_modules; i++) {
+      if (in_module(x, &plabar_modules[i])) {
+         current_cursor_module = i;
+         LOG_DEBUG("cursor entered module %d\n", current_cursor_module);
+         run_if_not_null(plabar_modules[i].pointer_enter, &plabar_modules[i], x - plabar_modules[i].width, y);
+         return;
+      }
+   }
+}
+
+void handle_pointer_leave() {
+   if (current_cursor_module == -1) { return; }
+   run_if_not_null(plabar_modules[current_cursor_module].pointer_leave, &plabar_modules[current_cursor_module]);
+}
+
+void handle_pointer_motion(int x, int y) {
+   //LOG_DEBUG("%d, %d\n", x, y); 
+   //LOG_DEBUG("current module %d\n", current_cursor_module);
+
+    for (int i = 0; i < num_modules; i++) {
+      if (in_module(x, &plabar_modules[i])) {
+         if (i == current_cursor_module) {
+            //LOG_DEBUG("same module\n");
+            run_if_not_null(plabar_modules[i].pointer_motion, &plabar_modules[i], x - plabar_modules[i].width, y);
+            return;
+         } else {
+            // if we moved to a different module send the leave event to the old module and enter event to the new module
+            if (current_cursor_module >= 0) {
+               run_if_not_null(plabar_modules[current_cursor_module].pointer_leave, &plabar_modules[current_cursor_module])
+            }
+
+            current_cursor_module = i;
+            run_if_not_null(plabar_modules[i].pointer_enter, &plabar_modules[i], x - plabar_modules[i].width, y);
+            return;
+         }
+      }
+   }
+
+   if (current_cursor_module == -1) { return; }
+   // else moved to no module -- run leave
+   run_if_not_null(plabar_modules[current_cursor_module].pointer_leave, &plabar_modules[current_cursor_module]);
+   current_cursor_module = -1;
+}
+
+void handle_pointer_button(uint32_t button, uint32_t state) {
+   if (current_cursor_module == -1) { return; }
+   run_if_not_null(plabar_modules[current_cursor_module].pointer_button, &plabar_modules[current_cursor_module], button, state);
+}
+
+void handle_pointer_axis(uint32_t axis, uint32_t value) {
+   LOG_DEBUG("%d %d\n", axis, value);
+   if (current_cursor_module == -1) { return; }
+   run_if_not_null(plabar_modules[current_cursor_module].pointer_axis, &plabar_modules[current_cursor_module], axis, value);
 }
 
 
