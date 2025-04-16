@@ -84,4 +84,7 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
    
    out->mark_dirty(out);
 
+   // we don't need to store the buffer for this anymore
+   free(out->buffer);
+
 }

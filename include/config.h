@@ -52,21 +52,26 @@ static inline color_t config_parse_color(const char* value, const char* key, con
 }
 
 static inline char* config_parse_string(char* value, const char* key, const char* module) {
+
+   // this is horrible and i hate it but it works
    int i, j;
 
 
-   for (i = 0; value[i] != '"'; i++) {
+   for (i = 0; value[i] != '"' && value[i] != 0x7F; i++) {
       if (!isspace(value[i])) {
          PARSE_FAIL("in module %s, key %s = %s is not a valid string \n", module, key, value);
       }
    }
 
-   for (j = i + 1; value[j] != '"'; j++) {
-      if (value[j] == 0) {
+   char dest_char = value[i] == 0x7f ? 0 : '"';
+
+   for (j = i + 1; value[j] != dest_char; j++) {
+      if (value[j] == 0 && dest_char != 0) {
          PARSE_FAIL("in module %s, key %s = %s does not have a closing \"\n", module, key, value);
       }
    }
 
+   value[i] = 0x7F; // marking to mark this as read, and so it should search til newline
    value[j] = 0;
    return &value[i + 1];
 }
