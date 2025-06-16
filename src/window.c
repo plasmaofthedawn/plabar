@@ -67,12 +67,12 @@ static struct wl_pointer_listener pointer_listener = {
     .motion = wl_pointer_motion,
     .button = wl_pointer_button,
     .axis = wl_pointer_axis,
-    .frame = wl_callback_unused,
-    .axis_source = wl_callback_unused,
-    .axis_stop = wl_callback_unused,
-    .axis_discrete = wl_callback_unused,
-    .axis_value120 = wl_callback_unused,
-    .axis_relative_direction = wl_callback_unused,
+    .frame = (typeof(pointer_listener.frame)) wl_callback_unused,
+    .axis_source = (typeof(pointer_listener.axis_source)) wl_callback_unused,
+    .axis_stop = (typeof(pointer_listener.axis_stop)) wl_callback_unused,
+    .axis_discrete = (typeof(pointer_listener.axis_discrete)) wl_callback_unused,
+    .axis_value120 = (typeof(pointer_listener.axis_value120)) wl_callback_unused,
+    .axis_relative_direction = (typeof(pointer_listener.axis_relative_direction)) wl_callback_unused,
 };
 
 /// ############# Wayland junk

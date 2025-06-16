@@ -64,12 +64,6 @@ void* thread_function(void* unused) {
     }
 }
 
-// input handling
-
-
-
-
-
 //////// stuff
 
 int print_entry(void* const context, struct hashmap_element_s* const e) {

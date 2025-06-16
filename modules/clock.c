@@ -16,7 +16,6 @@ typedef struct module_clock_data {
 
    // render options
    char format[100];
-   color_t color;
    PangoLayout *layout;
    cairo_surface_t* surface;
    cairo_t* cr;
@@ -79,9 +78,10 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
    
    char *t, *font_face;
    int width = -1;
+   color_t color;
 
    CONFIG_GET_OR_FAIL(local_config, "position", out->position, "clock");
-   CONFIG_GET_OR_FAIL(local_config, "color", data->color, "clock");
+   CONFIG_GET_OR_FAIL(local_config, "color", color, "clock");
    CONFIG_GET(local_config, "width", width, "clock");
 
    CONFIG_GET_OR_FAIL(global_config, "height", data->height, "global");
@@ -131,7 +131,7 @@ void module_init(module_t* out, struct hashmap_s *global_config, struct hashmap_
 
    pango_cairo_update_layout(data->cr, data->layout);
    
-   cairo_set_source_rgba(data->cr, ((data->color & 0x00FF0000) >> 16) / 255.0, ((data->color & 0x000000FF00) >> 8) / 255.0, ((data->color & 0x000000FF)) / 255.0, ((data->color & 0xFF000000) >> 24) / 255.0); 
+   cairo_set_source_rgba(data->cr, ((color & 0x00FF0000) >> 16) / 255.0, ((color & 0x000000FF00) >> 8) / 255.0, ((color & 0x000000FF)) / 255.0, ((color & 0xFF000000) >> 24) / 255.0); 
    
    pthread_t thread;
    pthread_create(&thread, NULL, &thread_function, out);

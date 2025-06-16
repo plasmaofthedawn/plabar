@@ -77,7 +77,7 @@ int init_plabar_modules(const char* module_dir, int n_modules) {
       }
    }
 
-   LOG_DEBUG("found %d modules\n", n_module_types);
+   LOG_DEBUG("found %d modules types\n", n_module_types);
 
    
    // rewind to actually load them
@@ -128,8 +128,7 @@ int init_plabar_modules(const char* module_dir, int n_modules) {
 
    // calloc to zero
    plabar_modules = calloc(sizeof(module_t) * n_modules, 1);
-   // +1 to allow for emptiness checking even when there's only one module
-   dirty_modules = malloc(sizeof(module_t*) * n_modules + 1);
+   dirty_modules = malloc(sizeof(module_t*) * n_modules);
    num_modules = n_modules;
 
    pthread_mutex_init(&module_dirty_cond_mutex, NULL);
@@ -147,9 +146,9 @@ void mark_dirty(module_t* self) {
 
    // add this module to the end of the stack 
    
-   dirty_modules_count += 1;
    dirty_modules[dirty_modules_count] = self;
-
+   dirty_modules_count += 1;
+   
    pthread_cond_signal(&module_dirty_condition);
    pthread_mutex_unlock(&module_dirty_cond_mutex);
 
@@ -167,9 +166,9 @@ module_t* get_next_dirty_module() {
       pthread_cond_wait(&module_dirty_condition, &module_dirty_cond_mutex);
    }
 
-   module_t* ret = dirty_modules[dirty_modules_count];
    dirty_modules_count--;
-
+   module_t* ret = dirty_modules[dirty_modules_count];
+   
    pthread_mutex_unlock(&module_dirty_cond_mutex);
    
    // ret is seperated out due to mutex bullshit :D
